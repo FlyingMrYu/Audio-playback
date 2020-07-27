@@ -1,0 +1,192 @@
+<template>
+  <div>
+    <audio
+      ref="audio"
+      id="audio"
+      src="https://fcvideo.cdn.bcebos.com/smart/0465cda9ee7dfaa5e120eee0dba93822.mp4"
+      @pause="onPause"
+      @play="onPlay"
+      @timeupdate="onTimeupdate"
+      @loadedmetadata="onLoadedmetadata"
+    >您的浏览器不支持audio标签</audio>
+    <div class="custom-audio clearfix">
+      <div>
+        <!-- 播放 -->
+        <div class="audio-item play" @click="play" v-if="!audio.playing">
+          <i class="iconfont iconbofang1"></i>
+        </div>
+        <!-- 暂停 -->
+        <div class="audio-item play" @click="pause" v-if="audio.playing">
+          <i class="iconfont iconbofang"></i>
+        </div>
+        <!-- 流动时间 -->
+        <div class="audio-item play-time">{{ audio.currentTime | formatSecond}}</div>
+        <div class="audio-item progress">
+          <el-slider
+            @change="progressChange"
+            v-model="audio.currentTime"
+            :format-tooltip="realFormatSecond"
+            :max="audio.maxTime"
+          ></el-slider>
+        </div>
+        <!-- 总时间 -->
+        <div class="audio-item total-time">{{ audio.maxTime | formatSecond}}</div>
+        <!-- 速度 -->
+        <SelectInput :speedList="speedList"></SelectInput>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+function realFormatSecond(second) {
+  var secondType = typeof second;
+
+  if (secondType === "number" || secondType === "string") {
+    second = parseInt(second);
+
+    var hours = Math.floor(second / 3600);
+    second = second - hours * 3600;
+    var mimute = Math.floor(second / 60);
+    second = second - mimute * 60;
+
+    return ("0" + mimute).slice(-2) + ":" + ("0" + second).slice(-2);
+  } else {
+    return "00:00";
+  }
+}
+import SelectInput from "./selct-input";
+export default {
+  name: "CustomAudio",
+  data() {
+    return {
+      speedList: [20, 15, 10, 8, 6, 4, 2],
+      speedValue: 2,
+      value: 20,
+      audio: {
+        // 播放状态
+        playing: false,
+        // 静音状态
+        muted: false,
+        // 音频当前播放时长
+        currentTime: 0,
+        // 音量
+        volume: 1,
+        // 音频最大播放时长
+        maxTime: 0,
+      },
+      cacheCurrent: 0,
+      cacheVoice: 1,
+    };
+  },
+  components: { SelectInput },
+  methods: {
+    // 播放音频
+    play() {
+      this.$refs.audio.play();
+    },
+    // 暂停音频
+    pause() {
+      this.$refs.audio.pause();
+    },
+    // 当音频播放
+    onPlay() {
+      this.audio.playing = true;
+    },
+    // 当音频暂停
+    onPause() {
+      this.audio.playing = false;
+    },
+    // 拖动进度滚动条
+    progressChange() {
+      console.log("拖动滚动条触发", this.cacheCurrent);
+      this.$refs.audio.currentTime = this.cacheCurrent;
+      this.audio.currentTime = this.cacheCurrent;
+    },
+    // 当timeupdate事件大概每秒一次，用来更新音频流的当前播放时间
+    onTimeupdate(res) {
+        console.log(res,'fff');
+      this.audio.currentTime = res.target.currentTime;
+    },
+    // 获取音频长度
+    onLoadedmetadata(res) {
+      this.audio.maxTime = parseInt(res.target.duration);
+    },
+    realFormatSecond(second) {
+      console.log("自动播放触发", second);
+      this.cacheCurrent = second;
+      return realFormatSecond(second);
+    },
+  },
+  filters: {
+    // 将整数转化成时分秒
+    formatSecond(second = 0) {
+      return realFormatSecond(second);
+    },
+  },
+};
+</script>
+
+<style scoped lang="scss">
+.custom-audio {
+  z-index: 999;
+  position: absolute;
+  bottom: 30px;
+  left: 20%;
+  right: 20%;
+  line-height: 38px;
+  color: #fff;
+  .audio-item {
+    float: left;
+    img {
+      vertical-align: middle;
+    }
+    &.play {
+      margin-right: 15px;
+      cursor: pointer;
+    }
+    &.mute {
+      width: 20px;
+      margin-left: 8px;
+      cursor: pointer;
+      line-height: 30px;
+      margin-top: 19px;
+    }
+    &.play-time {
+      margin-right: 15px;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    &.progress {
+      width: calc(100% - 238px);
+    }
+    &.total-time {
+      margin-left: 15px;
+      font-size: 12px;
+      text-align: center;
+    }
+  }
+  .iconfont {
+    font-size: 24px;
+    color: #fff;
+  }
+  /deep/ .el-slider__runway {
+    background-color: rgba($color: #fff, $alpha: 0.5);
+    border-radius: 2px;
+    height: 4px;
+  }
+  /deep/ .el-slider__bar {
+    border-radius: 2px;
+    background-color: #fff;
+    height: 4px;
+  }
+  /deep/ .el-slider__button {
+    width: 12px;
+    height: 12px;
+    background-color: #ffffff;
+    border: 0;
+    box-shadow: 0px 0px 3px 0px rgba(99, 172, 255, 0.75);
+  }
+}
+</style>
