@@ -14,6 +14,8 @@
         <div class="audio-item play-time">{{ audio.currentTime | formatSecond}}</div>
         <div class="audio-item progress">
           <el-slider
+            disabled
+            :show-tooltip="false"
             v-model="audio.currentTime"
             :format-tooltip="realFormatSecond"
             :max="audio.maxTime"
@@ -22,7 +24,7 @@
         <!-- 总时间 -->
         <div class="audio-item total-time">{{ audio.maxTime | formatSecond}}</div>
         <!-- 速度 -->
-        <SelectInput :speedList="speedList"></SelectInput>
+        <SelectInput @changeInput="changeInput" :speedList="speedList"></SelectInput>
       </div>
     </div>
   </div>
@@ -37,7 +39,13 @@ function realFormatSecond(second) {
     second = second - hours * 3600;
     var mimute = Math.floor(second / 60);
     second = second - mimute * 60;
-    return ("0" + mimute).slice(-2) + ":" + ("0" + second).slice(-2);
+    return (
+      ("0" + hours).slice(-2) +
+      ":" +
+      ("0" + mimute).slice(-2) +
+      ":" +
+      ("0" + second).slice(-2)
+    );
   } else {
     return "00:00";
   }
@@ -47,20 +55,39 @@ export default {
   name: "CustomAudio",
   data() {
     return {
-      speedList: [20, 15, 10, 8, 6, 4, 2],
+      speedList: [20, 10, 8, 6, 4, 2],
       audio: {
         // 播放状态
         playing: false,
         // 音频当前播放时长
         currentTime: 0,
         // 音频最大播放时长
-        maxTime: 5,
+        maxTime: this.slidMin,
       },
-      speed: 1000,
+      speed: 500,
     };
+  },
+  props: ["slidMin", "speedLit", "changeSpeed", "setPauseStart"],
+  watch: {
+    slidMin(val) {
+      this.audio.maxTime = val;
+    },
+    speedLit(val) {
+      this.speed = val;
+    },
   },
   components: { SelectInput },
   methods: {
+    //   倍速改变
+    changeInput(val) {
+      let speedNum = 500;
+      this.speed = parseInt(speedNum / val);
+      if (this.audio.playing) {
+        this.getUpTime("close", "speed");
+      }
+      console.log(this.speed, "this.speed ");
+      this.$emit("changeSpeed", parseInt(speedNum / val));
+    },
     // 播放音频
     play() {
       this.audio.playing = true;
@@ -68,35 +95,39 @@ export default {
         this.audio.currentTime = 0;
       }
       this.getUpTime();
+      this.$emit("setPauseStart", true);
     },
     // 暂停音频
     pause() {
       this.audio.playing = false;
       this.getUpTime("close");
+      this.$emit("setPauseStart", false);
     },
     // 拖动进度滚动条
     progressChange(val) {
       //   console.log(val, 32);
     },
     // 更新时间
-    getUpTime(close) {
+    getUpTime(close, speed) {
       var _that = this;
       if (close) {
         clearInterval(this.timeSet);
         this.timeSet = null;
-        return;
+        if (!speed) {
+          return;
+        }
       }
       this.timeSet = setInterval(() => {
         _that.onTimeupdate(close);
+        console.log(11111);
       }, _that.speed);
     },
-    // 当timeupdate事件大概每秒一次，用来更新音频流的当前播放时间
+    // 当timeupdate事件大概每秒一次
     onTimeupdate(close) {
-      console.log(
-        this.audio.currentTime == this.audio.maxTime,
-        "this.audio.currentTime"
-      );
-      if (this.audio.currentTime == this.audio.maxTime) {
+      if (
+        this.audio.maxTime &&
+        this.audio.currentTime == this.audio.maxTime
+      ) {
         clearInterval(this.timeSet);
         this.timeSet = null;
         return;
@@ -104,11 +135,10 @@ export default {
       let currentTime = this.audio.currentTime;
       currentTime++;
       this.audio.currentTime = currentTime;
+      console.log(this.audio.currentTime);
       if (this.audio.currentTime == this.audio.maxTime) {
         this.audio.playing = false;
       }
-      console.log(this.audio.currentTime, "this.audio.currentTime111");
-      console.log("             ");
     },
   },
   filters: {
